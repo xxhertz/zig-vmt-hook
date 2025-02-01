@@ -27,13 +27,13 @@ pub fn deinit() void {
     }
 }
 
-pub fn virtual_hook(vtable: [*]align(1) usize, index: u32, hook_ptr: usize) *anyopaque {
-    hook_state.list.append(.{ .index = index, .original_ptr = vtable[index], .vtable = vtable }) catch @panic("error: either you forgot to initialize hook_state, or some other error with the allocator occured");
+pub fn virtual_hook(vtable: [*]align(1) usize, index: u32, hook_ptr: *const anyopaque) *anyopaque {
+    hook_state.list.append(.{ .index = index, .original_ptr = vtable[index], .vtable = vtable }) catch @panic("error: either you forgot to call hooking.init(alloc), or some other error with the allocator occured");
 
     var old_protection: mem.PAGE_PROTECTION_FLAGS = .{};
     _ = mem.VirtualProtect(&vtable[index], @sizeOf(usize), .{ .PAGE_READWRITE = 1 }, &old_protection);
-    vtable[index] = hook_ptr;
+    vtable[index] = @intFromPtr(hook_ptr);
     _ = mem.VirtualProtect(&vtable[index], @sizeOf(usize), old_protection, &old_protection);
 
-    return vtable[index];
+    return @ptrFromInt(vtable[index]);
 }
